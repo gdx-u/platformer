@@ -1,3 +1,4 @@
+// TODO: add box ontop of player logic
 
 class Particle {
     constructor(x, y, vx, vy, size, color, duration, world = null, affected_by_gravity = false) {
@@ -169,6 +170,21 @@ class Box {
             }
         }
 
+        let p = this.world.player;
+        if (this.world.gravity > 0) {
+            if (this.x + this.w > p.x && p.x + p.size > this.x) {
+                if (this.y + this.h == p.y) {
+                    return true;
+                }
+            }        
+        } else {
+            if (this.x + this.w > p.x && p.x + p.size > this.x) {
+                if (this.y == p.y + p.size) {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
@@ -238,6 +254,21 @@ class Box {
                                 }
                                 break;
                             }
+                        }
+                    }
+                }
+            }
+
+            let p = this.world.player;
+            if (this.vy > 0) {
+                // Moving down
+                if (this.y < p.y && this.y + this.h > p.y) {
+                    if (this.x + this.w > p.x && p.x + p.size > this.x) {
+                        let in_ = this.y + this.h - p.y;
+                        this.y -= in_;
+                        this.vy = 0;
+                        if (this.world.gravity > 0) {
+                            this.grounded = true;
                         }
                     }
                 }
@@ -631,6 +662,7 @@ function assign_movement_handler(player) {
         if (ev.key === "Shift") {
             if (player.can_dash) {
                 player.vx = 30 * Math.sign(player.vx);
+                if (player.vy < 0) player.vy = 0;
                 player.can_dash = false;
             }
         }
@@ -651,14 +683,5 @@ function assign_movement_handler(player) {
 }
 
 w = new World();
-// p = new Player(130, 90, w);
-// o = new Body(0, 1000, 1920, 80, true, w);
 
-// o2 = new Body(0, 0, 100, 1080, true, w);
-// o3 = new Body(600, 820, 80, 80, true, w, true);
-
-// b = new Box(250, 90, 40, 40, w);
-
-// assign_movement_handler(p);
-
-w.load_world("0:2-black,1:1-black,2:3-blue;130,90;0,1000,1920,80,0;0,0,100,1080,0;600,820,80,80,1;620,90,40,40,2");
+w.load_world("0:2-black,1:1-orange,2:3-blue;130,490;0,1000,1920,80,0;0,0,100,1080,0;600,820,80,80,1;130,90,40,40,2");
