@@ -1,3 +1,4 @@
+
 class Particle {
     constructor(x, y, vx, vy, size, color, duration, world = null, affected_by_gravity = false) {
         this.x = x;
@@ -55,13 +56,14 @@ class Particle {
 }
 
 class Body {
-    constructor(x, y, w, h, solid, world, breakable = false) {
+    constructor(x, y, w, h, solid, world, color = "red", breakable = false) {
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
         this.solid = solid;
         this.world = world;
+        this.color = color;
         this.breakable = breakable;
         this.id = this.world.add(this);
 
@@ -71,6 +73,7 @@ class Body {
         this.el.style.height = `${this.h}px`;
         this.el.style.left = `${this.x}px`;
         this.el.style.top = `${this.y}px`;
+        this.el.style.backgroundColor = this.color;
 
         document.body.appendChild(this.el)
     }
@@ -86,7 +89,7 @@ class Body {
                 let rx = (Math.round(Math.random() * 100) - 50) / 5;
                 let ry = (Math.round(Math.random() * 100) - 50) / 5;
 
-                let p = new Particle(x, y, vx + rx, vy + ry, 8, "black", 200, this.world, true);
+                let p = new Particle(x, y, vx + rx, vy + ry, 8, this.color, 200, this.world, true);
             }
 
             this.world.remove(this);
@@ -95,7 +98,7 @@ class Body {
 }
 
 class Box {
-    constructor(x, y, width, height, world) {
+    constructor(x, y, width, height, world, color = "blue") {
         this.x = x;
         this.y = y;
         this.vx = 0;
@@ -104,11 +107,14 @@ class Box {
         
         this.w = width;
         this.h = height;
+        this.color = color;
 
         this.el = document.createElement("div");
         this.el.className = "box";
         this.el.style.width = `${width}px`;
         this.el.style.height = `${height}px`;
+        this.el.style.border = `4px solid ${this.color}`;
+
         this.update();
         document.body.appendChild(this.el);
 
@@ -342,6 +348,49 @@ class World {
         if (this.player) this.player.grounded = false;
         for (let obj of this.moveables) obj.move();
     }
+
+    load_world(code) {
+        // World codes should be the following:
+        // Metadata e.g. to make id1 breakable, id2 non-solid, id3 solid, id4 moveable: 1:1-COL,2:0-COL,3:2-COL,4:3-COL;
+        // Player spawn location, in the following: x,y;
+        // Blocks in the following: x,y,w,h,id;
+
+        let parts = code.split(";");
+        let metadata = parts[0];
+        let spawn = parts[1];
+        let blocks = parts.slice(2);
+        
+        let values = {};
+
+        for (let part of metadata.split(",")) {
+            let [id_, code] = part.split(":");
+            let [value, color_] = code.split("-");
+            value = Number(value);
+            values[Number(id_)] = {
+                solid: value > 0,
+                breakable: value == 1,
+                moveable: value == 3,
+                color: color_
+            };
+        }
+
+        let [sx, sy] = spawn.split(",");
+        sx = Number(sx);
+        sy = Number(sy);
+
+        let player = new Player(sx, sy, this);
+        assign_movement_handler(player);
+
+        for (let block of blocks) {
+            let [x, y, w, h, id_] = block.split(",").map(e => Number(e));
+
+            if (values[id_].moveable) {
+                let b = new Box(x, y, w, h, this, values[id_].color);
+            } else {
+                let b = new Body(x, y, w, h, values[id_].solid, this, values[id_].color, values[id_].breakable);
+            }
+        }
+    }
 }
 
 class Player {
@@ -566,7 +615,7 @@ class Player {
 let held = {}
 function assign_movement_handler(player) {
     document.body.onkeydown = ev => {
-        if (ev.key.toLowerCase() === "w") {
+        if (ev.key.toLowerCase() === " " || ev.key.toLowerCase() === "w") {
             if (player.grounded) {
                 if (w.gravity > 0) player.vy = -10;
                 else player.vy = 10;
@@ -574,10 +623,10 @@ function assign_movement_handler(player) {
             }
         } 
 
-        if (ev.key.toLowerCase() === " ") {
-            w.gravity_ = w.gravity * -1;
-            player.grounded = false;
-        }
+        // if (ev.key.toLowerCase() === " ") {
+        //     w.gravity_ = w.gravity * -1;
+        //     player.grounded = false;
+        // }
 
         if (ev.key === "Shift") {
             if (player.can_dash) {
@@ -602,12 +651,14 @@ function assign_movement_handler(player) {
 }
 
 w = new World();
-p = new Player(130, 90, w);
-o = new Body(0, 1000, 1920, 80, true, w);
+// p = new Player(130, 90, w);
+// o = new Body(0, 1000, 1920, 80, true, w);
 
-o2 = new Body(0, 0, 100, 1080, true, w);
-o3 = new Body(600, 820, 80, 80, true, w, true);
+// o2 = new Body(0, 0, 100, 1080, true, w);
+// o3 = new Body(600, 820, 80, 80, true, w, true);
 
-b = new Box(250, 90, 40, 40, w);
+// b = new Box(250, 90, 40, 40, w);
 
-assign_movement_handler(p);
+// assign_movement_handler(p);
+
+w.load_world("0:2-black,1:1-black,2:3-blue;130,90;0,1000,1920,80,0;0,0,100,1080,0;600,820,80,80,1;620,90,40,40,2");
